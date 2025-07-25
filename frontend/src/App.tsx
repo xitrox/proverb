@@ -1,69 +1,106 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-
-interface Proverb {
-  id: string
-  text: string
-  author: string
-  createdAt?: string
-}
-
-// Mock data for development - will be replaced with Notion API
-const mockProverbs: Proverb[] = [
-  { id: '1', text: 'Early to bed and early to rise makes a man healthy, wealthy, and coffee.', author: 'Benjamin Franklin (misquoted)' },
-  { id: '2', text: 'The early bird catches the worm, but the second mouse gets the cheese.', author: 'Anonymous Developer' },
-  { id: '3', text: 'A penny saved is a penny that you forgot to spend on AWS.', author: 'DevOps Engineer' },
-  { id: '4', text: 'Rome wasn\'t built in a day, but they had version control.', author: 'Project Manager' },
-  { id: '5', text: 'When in doubt, restart the server and blame the network.', author: 'System Admin' },
-  { id: '6', text: 'The customer is always right, except when they\'re wrong.', author: 'Product Manager' },
-  { id: '7', text: 'Don\'t put all your eggs in one basket, put them in a microservice.', author: 'Software Architect' },
-  { id: '8', text: 'A watched pot never boils, but an unwatched deployment always fails.', author: 'DevOps Team Lead' }
-]
+import { proverbsAPI, type Proverb } from './services/api'
 
 function App() {
   const [currentProverb, setCurrentProverb] = useState<Proverb | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filteredProverbs, setFilteredProverbs] = useState<Proverb[]>(mockProverbs)
+  const [allProverbs, setAllProverbs] = useState<Proverb[]>([])
+  const [filteredProverbs, setFilteredProverbs] = useState<Proverb[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
   const [newProverb, setNewProverb] = useState({ text: '', author: '' })
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Load random proverb on mount
+  // Load proverbs from API on mount
   useEffect(() => {
-    loadRandomProverb()
+    loadProverbs()
   }, [])
 
   // Filter proverbs based on search term
   useEffect(() => {
     if (searchTerm.trim() === '') {
-      setFilteredProverbs(mockProverbs)
+      setFilteredProverbs(allProverbs)
     } else {
-      const filtered = mockProverbs.filter(proverb =>
+      const filtered = allProverbs.filter(proverb =>
         proverb.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
         proverb.author.toLowerCase().includes(searchTerm.toLowerCase())
       )
       setFilteredProverbs(filtered)
     }
-  }, [searchTerm])
+  }, [searchTerm, allProverbs])
 
-  const loadRandomProverb = () => {
-    const randomIndex = Math.floor(Math.random() * mockProverbs.length)
-    setCurrentProverb(mockProverbs[randomIndex])
+  const loadProverbs = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const proverbs = await proverbsAPI.getProverbs()
+      setAllProverbs(proverbs)
+      setFilteredProverbs(proverbs)
+      
+      // Set random proverb if we have any
+      if (proverbs.length > 0) {
+        const randomIndex = Math.floor(Math.random() * proverbs.length)
+        setCurrentProverb(proverbs[randomIndex])
+      }
+    } catch (err) {
+      setError('Failed to load proverbs. Please try again later.')
+      console.error('Error loading proverbs:', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const handleAddProverb = (e: React.FormEvent) => {
+  const loadRandomProverb = () => {
+    if (allProverbs.length > 0) {
+      const randomIndex = Math.floor(Math.random() * allProverbs.length)
+      setCurrentProverb(allProverbs[randomIndex])
+    }
+  }
+
+  const handleAddProverb = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (newProverb.text.trim() && newProverb.author.trim()) {
-      const proverb: Proverb = {
-        id: Date.now().toString(),
-        text: newProverb.text.trim(),
-        author: newProverb.author.trim(),
-        createdAt: new Date().toISOString()
-      }
-      mockProverbs.push(proverb)
+    if (!newProverb.text.trim() || !newProverb.author.trim()) return
+
+    try {
+      setIsSubmitting(true)
+      setError(null)
+      
+      const addedProverb = await proverbsAPI.addProverb(
+        newProverb.text.trim(),
+        newProverb.author.trim()
+      )
+      
+      // Add to local state
+      const updatedProverbs = [addedProverb, ...allProverbs]
+      setAllProverbs(updatedProverbs)
+      setFilteredProverbs(updatedProverbs)
+      
+      // Reset form
       setNewProverb({ text: '', author: '' })
       setShowAddForm(false)
-      // TODO: Send to Notion API via our proxy
+      
+      // Show success message
+      alert('Proverb added successfully!')
+      
+    } catch (err) {
+      setError('Failed to add proverb. Please try again.')
+      console.error('Error adding proverb:', err)
+    } finally {
+      setIsSubmitting(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading proverbs...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -75,6 +112,19 @@ function App() {
             <h1 className="text-2xl font-bold text-slate-800 mb-4">
               Wrong Proverbs Collection
             </h1>
+            
+            {/* Error message */}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                {error}
+                <button 
+                  onClick={() => setError(null)} 
+                  className="ml-2 text-red-900 hover:text-red-700"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
             
             {/* Current random proverb */}
             <div className="bg-slate-100 rounded-lg p-6 mb-4">
@@ -88,14 +138,17 @@ function App() {
                   </cite>
                 </>
               ) : (
-                <p className="text-slate-500">Loading proverb...</p>
+                <p className="text-slate-500">
+                  {allProverbs.length === 0 ? 'No proverbs available yet.' : 'Click the button to load a random proverb!'}
+                </p>
               )}
             </div>
             
             {/* Reload button */}
             <button
               onClick={loadRandomProverb}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
+              disabled={allProverbs.length === 0}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white px-6 py-2 rounded-lg font-medium transition-colors duration-200"
             >
               🎲 Get Another Proverb
             </button>
@@ -132,6 +185,7 @@ function App() {
                   rows={3}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
               <div>
@@ -146,13 +200,15 @@ function App() {
                   placeholder="Who said this?"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   required
+                  disabled={isSubmitting}
                 />
               </div>
               <button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors duration-200"
+                disabled={isSubmitting || !newProverb.text.trim() || !newProverb.author.trim()}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white py-2 rounded-lg font-medium transition-colors duration-200"
               >
-                Add Proverb
+                {isSubmitting ? 'Adding...' : 'Add Proverb'}
               </button>
             </div>
           </form>
@@ -190,13 +246,24 @@ function App() {
                 <cite className="text-sm text-slate-600">
                   — {proverb.author}
                 </cite>
+                {proverb.createdAt && (
+                  <div className="text-xs text-slate-500 mt-2">
+                    Added: {new Date(proverb.createdAt).toLocaleDateString()}
+                  </div>
+                )}
               </div>
             ))}
           </div>
           
-          {filteredProverbs.length === 0 && (
+          {filteredProverbs.length === 0 && allProverbs.length > 0 && (
             <p className="text-slate-500 text-center py-8">
               No proverbs found matching "{searchTerm}"
+            </p>
+          )}
+          
+          {allProverbs.length === 0 && !loading && (
+            <p className="text-slate-500 text-center py-8">
+              No proverbs in the database yet. Be the first to add one!
             </p>
           )}
         </div>
@@ -208,6 +275,12 @@ function App() {
           <p className="text-sm text-slate-600">
             A collection of wrong proverbs by three proverb lovers 📚
           </p>
+          <button 
+            onClick={loadProverbs}
+            className="text-sm text-blue-600 hover:text-blue-800 mt-2"
+          >
+            🔄 Refresh from Notion
+          </button>
         </div>
       </footer>
     </div>
