@@ -55,7 +55,7 @@ function App() {
     setLoading(false)
   }
 
-  const handleLogin = (token: string) => {
+  const handleLogin = () => {
     setIsAuthenticated(true)
   }
 
