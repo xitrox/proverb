@@ -22,7 +22,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'Authorization': `Bearer ${NOTION_TOKEN}`,
         'Notion-Version': '2022-06-28',
         'Content-Type': 'application/json',
-        ...req.headers,
       },
       body: req.method !== 'GET' && req.body ? JSON.stringify(req.body) : undefined,
     });
