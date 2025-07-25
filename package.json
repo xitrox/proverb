@@ -1,0 +1,28 @@
+{
+  "name": "proverb-frontend",
+  "version": "1.0.0",
+  "description": "A frontend for collecting and browsing wrong proverbs from a Notion database",
+  "private": true,
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "preview": "cd frontend && npm run preview",
+    "lint": "cd frontend && npm run lint",
+    "install-frontend": "cd frontend && npm install",
+    "install-api": "cd api && npm install",
+    "install-all": "npm run install-frontend && npm run install-api"
+  },
+  "keywords": [
+    "proverbs",
+    "notion",
+    "react",
+    "typescript",
+    "vercel"
+  ],
+  "author": "Proverb Lovers Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/proverb-frontend.git"
+  }
+} 
