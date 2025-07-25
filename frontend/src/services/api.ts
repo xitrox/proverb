@@ -8,9 +8,28 @@ interface Proverb {
 const API_BASE = window.location.origin
 
 class ProverbsAPI {
+  private getAuthHeaders(): HeadersInit {
+    const token = localStorage.getItem('proverb_token')
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    }
+  }
+
   async getProverbs(): Promise<Proverb[]> {
     try {
-      const response = await fetch(`${API_BASE}/api/proverbs`)
+      const response = await fetch(`${API_BASE}/api/proverbs`, {
+        headers: this.getAuthHeaders()
+      })
+      
+      if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('proverb_token')
+        localStorage.removeItem('proverb_token_expires')
+        window.location.reload() // Trigger re-authentication
+        throw new Error('Authentication expired')
+      }
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
@@ -26,11 +45,17 @@ class ProverbsAPI {
     try {
       const response = await fetch(`${API_BASE}/api/proverbs`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify({ text, author })
       })
+      
+      if (response.status === 401) {
+        // Token expired or invalid
+        localStorage.removeItem('proverb_token')
+        localStorage.removeItem('proverb_token_expires')
+        window.location.reload() // Trigger re-authentication
+        throw new Error('Authentication expired')
+      }
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)

@@ -1,6 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { verifyToken, extractTokenFromRequest } from './middleware/auth';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Check authentication
+  const token = extractTokenFromRequest(req.headers.authorization);
+  if (!token || !verifyToken(token)) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+
   const NOTION_TOKEN = process.env.NOTION_TOKEN;
   const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
 

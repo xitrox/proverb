@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 import { proverbsAPI, type Proverb } from './services/api'
+import LoginForm from './components/LoginForm'
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentProverb, setCurrentProverb] = useState<Proverb | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [allProverbs, setAllProverbs] = useState<Proverb[]>([])
@@ -13,10 +15,17 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Load proverbs from API on mount
+  // Check authentication on mount
   useEffect(() => {
-    loadProverbs()
+    checkAuth()
   }, [])
+
+  // Load proverbs when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadProverbs()
+    }
+  }, [isAuthenticated])
 
   // Filter proverbs based on search term
   useEffect(() => {
@@ -30,6 +39,34 @@ function App() {
       setFilteredProverbs(filtered)
     }
   }, [searchTerm, allProverbs])
+
+  const checkAuth = () => {
+    const token = localStorage.getItem('proverb_token')
+    const expiresAt = localStorage.getItem('proverb_token_expires')
+    
+    if (token && expiresAt && Date.now() < parseInt(expiresAt)) {
+      setIsAuthenticated(true)
+    } else {
+      // Clear expired token
+      localStorage.removeItem('proverb_token')
+      localStorage.removeItem('proverb_token_expires')
+      setIsAuthenticated(false)
+    }
+    setLoading(false)
+  }
+
+  const handleLogin = (token: string) => {
+    setIsAuthenticated(true)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('proverb_token')
+    localStorage.removeItem('proverb_token_expires')
+    setIsAuthenticated(false)
+    setAllProverbs([])
+    setFilteredProverbs([])
+    setCurrentProverb(null)
+  }
 
   const loadProverbs = async () => {
     try {
@@ -92,6 +129,11 @@ function App() {
     }
   }
 
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={handleLogin} />
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -109,9 +151,17 @@ function App() {
       <header className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-slate-800 mb-4">
-              Wrong Proverbs Collection
-            </h1>
+            <div className="flex justify-between items-center mb-4">
+              <h1 className="text-2xl font-bold text-slate-800">
+                Wrong Proverbs Collection
+              </h1>
+              <button
+                onClick={handleLogout}
+                className="text-sm text-slate-600 hover:text-slate-800 px-3 py-1 border border-slate-300 rounded"
+              >
+                Logout
+              </button>
+            </div>
             
             {/* Error message */}
             {error && (
