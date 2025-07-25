@@ -68,6 +68,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           text = page.properties.Title.title[0].plain_text;
         } else if (page.properties.Name?.title?.[0]?.plain_text) {
           text = page.properties.Name.title[0].plain_text;
+        } else if (page.properties.Spruch?.title?.[0]?.plain_text) {
+          text = page.properties.Spruch.title[0].plain_text;
+        } else if (page.properties.Spruch?.rich_text?.[0]?.plain_text) {
+          text = page.properties.Spruch.rich_text[0].plain_text;
         } else if (page.properties.Text?.rich_text?.[0]?.plain_text) {
           text = page.properties.Text.rich_text[0].plain_text;
         } else if (page.properties.Proverb?.rich_text?.[0]?.plain_text) {
@@ -113,7 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             database_id: NOTION_DATABASE_ID
           },
           properties: {
-            Title: {
+            Spruch: {
               title: [
                 {
                   text: {
@@ -153,7 +157,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Transform response to our format
       const newProverb = {
         id: data.id,
-        text: data.properties.Title?.title?.[0]?.plain_text || text,
+        text: data.properties.Spruch?.title?.[0]?.plain_text || text,
         author: data.properties.Author?.rich_text?.[0]?.plain_text || author,
         createdAt: data.created_time
       };
