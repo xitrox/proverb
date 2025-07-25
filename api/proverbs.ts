@@ -35,13 +35,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          page_size: 100,
-          sorts: [
-            {
-              property: 'Created',
-              direction: 'descending'
-            }
-          ]
+          page_size: 100
+          // Removed sorting to avoid 400 error if "Created" property doesn't exist
         })
       });
 
