@@ -48,7 +48,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-slate-800 mb-2">
-            Wrong Proverbs Collection
+            Bullshit collection
           </h1>
           <p className="text-slate-600">
             Enter the PIN to access the collection

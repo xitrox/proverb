@@ -153,7 +153,7 @@ function App() {
           <div className="text-center">
             <div className="flex justify-between items-center mb-4">
               <h1 className="text-2xl font-bold text-slate-800">
-                Wrong Proverbs Collection
+                Bullshit collection
               </h1>
               <button
                 onClick={handleLogout}
@@ -323,7 +323,7 @@ function App() {
       <footer className="bg-white border-t border-slate-200 mt-12">
         <div className="max-w-2xl mx-auto px-4 py-6 text-center">
           <p className="text-sm text-slate-600">
-            A collection of wrong proverbs by three proverb lovers 📚
+            A bullshit collection by three proverb lovers 📚
           </p>
           <button 
             onClick={loadProverbs}
