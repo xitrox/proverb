@@ -7,13 +7,16 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentProverb, setCurrentProverb] = useState<Proverb | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [authorFilter, setAuthorFilter] = useState('')
   const [allProverbs, setAllProverbs] = useState<Proverb[]>([])
   const [filteredProverbs, setFilteredProverbs] = useState<Proverb[]>([])
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
   const [showAddForm, setShowAddForm] = useState(false)
   const [newProverb, setNewProverb] = useState({ text: '', author: '' })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccessToast, setShowSuccessToast] = useState(false)
 
   // Check authentication on mount
   useEffect(() => {
@@ -27,18 +30,45 @@ function App() {
     }
   }, [isAuthenticated])
 
-  // Filter proverbs based on search term
+  // Get unique authors for filter dropdown
+  const uniqueAuthors = Array.from(new Set(allProverbs.map(p => p.author))).sort()
+
+  // Auto-dismiss success toast after 3 seconds
   useEffect(() => {
-    if (searchTerm.trim() === '') {
-      setFilteredProverbs(allProverbs)
-    } else {
-      const filtered = allProverbs.filter(proverb =>
+    if (showSuccessToast) {
+      const timer = setTimeout(() => {
+        setShowSuccessToast(false)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [showSuccessToast])
+
+  // Filter and sort proverbs based on search term, author filter, and sort order
+  useEffect(() => {
+    let filtered = allProverbs
+
+    // Apply search filter
+    if (searchTerm.trim() !== '') {
+      filtered = filtered.filter(proverb =>
         proverb.text.toLowerCase().includes(searchTerm.toLowerCase()) ||
         proverb.author.toLowerCase().includes(searchTerm.toLowerCase())
       )
-      setFilteredProverbs(filtered)
     }
-  }, [searchTerm, allProverbs])
+
+    // Apply author filter
+    if (authorFilter !== '') {
+      filtered = filtered.filter(proverb => proverb.author === authorFilter)
+    }
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime()
+      const dateB = new Date(b.createdAt || 0).getTime()
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB
+    })
+
+    setFilteredProverbs(sorted)
+  }, [searchTerm, authorFilter, allProverbs, sortOrder])
 
   const checkAuth = () => {
     const token = localStorage.getItem('proverb_token')
@@ -117,10 +147,10 @@ function App() {
       // Reset form
       setNewProverb({ text: '', author: '' })
       setShowAddForm(false)
-      
-      // Show success message
-      alert('Proverb added successfully!')
-      
+
+      // Show success toast
+      setShowSuccessToast(true)
+
     } catch (err) {
       setError('Failed to add proverb. Please try again.')
       console.error('Error adding proverb:', err)
@@ -147,6 +177,26 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
+      {/* Success Toast */}
+      {showSuccessToast && (
+        <div className="fixed top-4 right-4 z-50 animate-fade-in">
+          <div className="bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="font-medium">Proverb added successfully!</span>
+            <button
+              onClick={() => setShowSuccessToast(false)}
+              className="ml-2 hover:bg-green-700 rounded p-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header with random proverb */}
       <header className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-2xl mx-auto px-4 py-6">
@@ -277,6 +327,43 @@ function App() {
             placeholder="Search by text or author..."
             className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-base"
           />
+        </div>
+
+        {/* Filter and Sort controls */}
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Author filter */}
+          <div>
+            <label htmlFor="authorFilter" className="block text-sm font-medium text-slate-700 mb-2">
+              Filter by author
+            </label>
+            <select
+              id="authorFilter"
+              value={authorFilter}
+              onChange={(e) => setAuthorFilter(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+            >
+              <option value="">All authors</option>
+              {uniqueAuthors.map(author => (
+                <option key={author} value={author}>{author}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Sort dropdown */}
+          <div>
+            <label htmlFor="sortOrder" className="block text-sm font-medium text-slate-700 mb-2">
+              Sort by
+            </label>
+            <select
+              id="sortOrder"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
         </div>
 
         {/* Filtered proverbs list */}
