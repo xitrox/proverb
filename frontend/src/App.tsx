@@ -7,7 +7,6 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [currentProverb, setCurrentProverb] = useState<Proverb | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [authorFilter, setAuthorFilter] = useState('')
   const [allProverbs, setAllProverbs] = useState<Proverb[]>([])
   const [filteredProverbs, setFilteredProverbs] = useState<Proverb[]>([])
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest')
@@ -30,9 +29,6 @@ function App() {
     }
   }, [isAuthenticated])
 
-  // Get unique authors for filter dropdown
-  const uniqueAuthors = Array.from(new Set(allProverbs.map(p => p.author))).sort()
-
   // Auto-dismiss success toast after 3 seconds
   useEffect(() => {
     if (showSuccessToast) {
@@ -43,7 +39,7 @@ function App() {
     }
   }, [showSuccessToast])
 
-  // Filter and sort proverbs based on search term, author filter, and sort order
+  // Filter and sort proverbs based on search term and sort order
   useEffect(() => {
     let filtered = allProverbs
 
@@ -55,11 +51,6 @@ function App() {
       )
     }
 
-    // Apply author filter
-    if (authorFilter !== '') {
-      filtered = filtered.filter(proverb => proverb.author === authorFilter)
-    }
-
     // Apply sorting
     const sorted = [...filtered].sort((a, b) => {
       const dateA = new Date(a.createdAt || 0).getTime()
@@ -68,7 +59,7 @@ function App() {
     })
 
     setFilteredProverbs(sorted)
-  }, [searchTerm, authorFilter, allProverbs, sortOrder])
+  }, [searchTerm, allProverbs, sortOrder])
 
   const checkAuth = () => {
     const token = localStorage.getItem('proverb_token')
@@ -329,41 +320,20 @@ function App() {
           />
         </div>
 
-        {/* Filter and Sort controls */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Author filter */}
-          <div>
-            <label htmlFor="authorFilter" className="block text-sm font-medium text-slate-700 mb-2">
-              Filter by author
-            </label>
-            <select
-              id="authorFilter"
-              value={authorFilter}
-              onChange={(e) => setAuthorFilter(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
-            >
-              <option value="">All authors</option>
-              {uniqueAuthors.map(author => (
-                <option key={author} value={author}>{author}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Sort dropdown */}
-          <div>
-            <label htmlFor="sortOrder" className="block text-sm font-medium text-slate-700 mb-2">
-              Sort by
-            </label>
-            <select
-              id="sortOrder"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
-            >
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-            </select>
-          </div>
+        {/* Sort dropdown */}
+        <div className="mb-6">
+          <label htmlFor="sortOrder" className="block text-sm font-medium text-slate-700 mb-2">
+            Sort by
+          </label>
+          <select
+            id="sortOrder"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as 'newest' | 'oldest')}
+            className="px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+          >
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+          </select>
         </div>
 
         {/* Filtered proverbs list */}
