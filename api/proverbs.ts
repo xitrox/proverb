@@ -1,7 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyToken, extractTokenFromRequest } from './middleware/auth';
+import { setCorsHeaders, handleCorsPreFlight } from './middleware/cors';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCorsHeaders(res);
+
+  if (handleCorsPreFlight(req, res)) {
+    return;
+  }
+
   // Check authentication
   const token = extractTokenFromRequest(req.headers.authorization);
   if (!token || !verifyToken(token)) {

@@ -1,10 +1,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import jwt from 'jsonwebtoken';
+import { setCorsHeaders, handleCorsPreFlight } from './middleware/cors';
 
 const ACCESS_PIN = process.env.ACCESS_PIN || '1234'; // Set this in Vercel environment variables
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Set this in Vercel environment variables
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCorsHeaders(res);
+
+  if (handleCorsPreFlight(req, res)) {
+    return;
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;

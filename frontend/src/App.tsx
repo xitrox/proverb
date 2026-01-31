@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import { proverbsAPI, type Proverb } from './services/api'
+import { proverbsAPI, ratingsAPI, type Proverb, type ProverbRating } from './services/api'
 import LoginForm from './components/LoginForm'
+import StarRating from './components/StarRating'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -16,6 +17,8 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccessToast, setShowSuccessToast] = useState(false)
+  const [ratingsMap, setRatingsMap] = useState<Map<string, ProverbRating>>(new Map())
+  const [userRatingsMap, setUserRatingsMap] = useState<Map<string, number>>(new Map())
 
   // Check authentication on mount
   useEffect(() => {
@@ -96,17 +99,56 @@ function App() {
       const proverbs = await proverbsAPI.getProverbs()
       setAllProverbs(proverbs)
       setFilteredProverbs(proverbs)
-      
+
       // Set random proverb if we have any
       if (proverbs.length > 0) {
         const randomIndex = Math.floor(Math.random() * proverbs.length)
         setCurrentProverb(proverbs[randomIndex])
       }
+
+      // Load ratings data
+      await loadRatings(proverbs)
     } catch (err) {
       setError('Failed to load proverbs. Please try again later.')
       console.error('Error loading proverbs:', err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadRatings = async (proverbs: Proverb[]) => {
+    try {
+      const proverbIds = proverbs.map(p => p.id)
+
+      // Load rating stats and user ratings in parallel
+      const [stats, userRatings] = await Promise.all([
+        ratingsAPI.getRatingStats(proverbIds),
+        ratingsAPI.getUserRatings()
+      ])
+
+      // Create maps for quick lookup
+      const statsMap = new Map(stats.map(s => [s.proverbId, s]))
+      const userMap = new Map(userRatings.map(r => [r.proverbId, r.rating]))
+
+      setRatingsMap(statsMap)
+      setUserRatingsMap(userMap)
+    } catch (err) {
+      console.error('Error loading ratings:', err)
+      // Don't show error to user - ratings are not critical
+    }
+  }
+
+  const handleRate = async (proverbId: string, rating: number) => {
+    try {
+      const result = await ratingsAPI.submitRating(proverbId, rating)
+
+      // Update local state
+      setRatingsMap(prev => new Map(prev).set(proverbId, result.stats))
+      setUserRatingsMap(prev => new Map(prev).set(proverbId, rating))
+    } catch (err) {
+      setError('Failed to submit rating. Please try again.')
+      console.error('Error submitting rating:', err)
+      throw err
     }
   }
 
@@ -342,24 +384,41 @@ function App() {
             All Proverbs ({filteredProverbs.length})
           </h2>
           <div className="space-y-4">
-            {filteredProverbs.map((proverb) => (
-              <div
-                key={proverb.id}
-                className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow duration-200"
-              >
-                <blockquote className="text-slate-700 mb-2">
-                  "{proverb.text}"
-                </blockquote>
-                <cite className="text-sm text-slate-600">
-                  — {proverb.author}
-                </cite>
-                {proverb.createdAt && (
-                  <div className="text-xs text-slate-500 mt-2">
-                    Added: {new Date(proverb.createdAt).toLocaleDateString()}
+            {filteredProverbs.map((proverb) => {
+              const stats = ratingsMap.get(proverb.id)
+              const userRating = userRatingsMap.get(proverb.id)
+
+              return (
+                <div
+                  key={proverb.id}
+                  className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow duration-200"
+                >
+                  <blockquote className="text-slate-700 mb-2">
+                    "{proverb.text}"
+                  </blockquote>
+                  <cite className="text-sm text-slate-600 block mb-3">
+                    — {proverb.author}
+                  </cite>
+
+                  {/* Star Rating */}
+                  <div className="mb-2">
+                    <StarRating
+                      proverbId={proverb.id}
+                      averageRating={stats?.averageRating || 0}
+                      totalVotes={stats?.totalVotes || 0}
+                      userRating={userRating}
+                      onRate={handleRate}
+                    />
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {proverb.createdAt && (
+                    <div className="text-xs text-slate-500 mt-2">
+                      Added: {new Date(proverb.createdAt).toLocaleDateString()}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
           
           {filteredProverbs.length === 0 && allProverbs.length > 0 && (

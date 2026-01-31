@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getApiBase } from '../config'
 
 interface LoginFormProps {
   onLogin: (token: string) => void
@@ -17,7 +18,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       setIsLoading(true)
       setError(null)
 
-      const response = await fetch('/api/auth', {
+      const response = await fetch(`${getApiBase()}/api/auth`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -25,11 +26,20 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
         body: JSON.stringify({ pin: pin.trim() })
       })
 
-      const data = await response.json()
-
       if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed')
+        // Try to parse error message
+        let errorMsg = 'Authentication failed'
+        try {
+          const data = await response.json()
+          errorMsg = data.error || errorMsg
+        } catch {
+          // If JSON parsing fails, use status text
+          errorMsg = response.statusText || errorMsg
+        }
+        throw new Error(errorMsg)
       }
+
+      const data = await response.json()
 
       // Store token and call onLogin
       localStorage.setItem('proverb_token', data.token)
